@@ -29,10 +29,9 @@ public class UsuarioController {
         return service.buscarPorId(id);
     }
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable("id") Integer id){
-        service.deletar(id);
+    public ResponseEntity<UsuarioResponse> delete(@PathVariable("id") Integer id){
+        return service.deletar(id);
     }
-
     @PostMapping
     public ResponseEntity<UsuarioResponse> criarUsuario(@RequestBody Usuario usuario) {
         ResponseEntity<UsuarioResponse> salvo = service.createUser(usuario);

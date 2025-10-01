@@ -4,6 +4,7 @@ import com.my.events.DTO.UsuarioResponse;
 import com.my.events.model.Usuario;
 import com.my.events.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -60,10 +61,16 @@ public class UsuarioService {
 
         return usuarioRepository.save(existente);
     }
-    public boolean deletar(Integer id) {
-        return usuarioRepository.findById(id).map(evento -> {
-            usuarioRepository.deleteById(id);
-            return true;
-        }).orElse(false);
+    public ResponseEntity<UsuarioResponse> deletar(Integer id) {
+        return usuarioRepository.findById(id)
+                .map(usuario -> {
+                    usuarioRepository.deleteById(id);
+                    UsuarioResponse response = new UsuarioResponse("Usuário deletado com sucesso!", usuario);
+                    return ResponseEntity.ok(response);
+                })
+                .orElseGet(() -> {
+                    UsuarioResponse response = new UsuarioResponse("Usuário não encontrado!", null);
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                });
     }
 }
