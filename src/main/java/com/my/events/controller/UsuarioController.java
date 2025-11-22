@@ -17,19 +17,19 @@ public class UsuarioController {
     @Autowired
     private UsuarioService service;
     @PutMapping("/{id}")
-    public Usuario update(@PathVariable Integer id, @RequestBody Usuario usuario) {
+    public Usuario atualizarUsuario(@PathVariable Integer id, @RequestBody Usuario usuario) {
     return service.atualizar(id, usuario);
     }
     @GetMapping
-    public List<Usuario> getAll(){
+    public List<Usuario> listarUsuarios(){
         return service.listarTodos();
     }
     @GetMapping("/{id}")
-    public Usuario getOne(@PathVariable("id") Integer id){
+    public Usuario buscarUsuario(@PathVariable("id") Integer id){
         return service.buscarPorId(id);
     }
     @DeleteMapping("/{id}")
-    public ResponseEntity<UsuarioResponse> delete(@PathVariable("id") Integer id){
+    public ResponseEntity<UsuarioResponse> removerUsuario(@PathVariable("id") Integer id){
         return service.deletar(id);
     }
     @PostMapping

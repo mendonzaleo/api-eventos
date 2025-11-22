@@ -6,7 +6,9 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "eventos")
@@ -24,5 +26,17 @@ public class Evento {
     @Column(nullable = false)
     private LocalDate scheduleDate;
 
-    private List<Usuario> guests = new ArrayList<>();
+    public Set<Usuario> guests = new HashSet<>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Evento evento = (Evento) o;
+        return Objects.equals(id, evento.id) && Objects.equals(name, evento.name) && Objects.equals(location, evento.location) && Objects.equals(scheduleDate, evento.scheduleDate) && Objects.equals(guests, evento.guests);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, location, scheduleDate, guests);
+    }
 }

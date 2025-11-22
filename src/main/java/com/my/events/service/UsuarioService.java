@@ -18,7 +18,7 @@ public class UsuarioService {
     UsuarioRepository usuarioRepository;
     @Autowired
     private PasswordEncoder encoder;
-    public ResponseEntity<UsuarioResponse> createUser(Usuario usuario){
+    public ResponseEntity<UsuarioResponse> criarUsuario(Usuario usuario){
         String pass = usuario.getPassword();
         //criptografando antes de salvar no banco
         usuario.setPassword(encoder.encode(pass));
