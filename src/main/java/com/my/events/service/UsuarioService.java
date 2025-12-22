@@ -1,6 +1,7 @@
 package com.my.events.service;
 
-import com.my.events.DTO.UsuarioResponse;
+import com.my.events.DTO.UsuarioRequestDTO;
+import com.my.events.model.Evento;
 import com.my.events.model.Usuario;
 import com.my.events.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UsuarioService {
@@ -18,7 +18,13 @@ public class UsuarioService {
     UsuarioRepository usuarioRepository;
     @Autowired
     private PasswordEncoder encoder;
-    public ResponseEntity<UsuarioResponse> criarUsuario(Usuario usuario){
+
+    public Usuario criarUsuario(UsuarioRequestDTO usuario) {
+
+        Usuario usuarioCriado = new Usuario();
+        usuarioCriado.setName(usuario.getName());
+        usuarioCriado.setPassword(usuario.getPassword());
+        usuarioCriado.setUsername(usuario.getUsername());
         String pass = usuario.getPassword();
         //criptografando antes de salvar no banco
         usuario.setPassword(encoder.encode(pass));
@@ -26,11 +32,8 @@ public class UsuarioService {
         if (usuario.getRoles() == null || usuario.getRoles().isEmpty()) {
             usuario.getRoles().add("ROLE_USER");
         }
-        Usuario savedUsuario = usuarioRepository.save(usuario);
-
-        UsuarioResponse response = new UsuarioResponse("Usuário criado com sucesso!", savedUsuario);
-
-        return ResponseEntity.ok(response);
+        Usuario savedUsuario = usuarioRepository.save(usuarioCriado);
+        return usuarioCriado;
     }
 
     public List<Usuario> listarTodos() {
@@ -61,16 +64,17 @@ public class UsuarioService {
 
         return usuarioRepository.save(existente);
     }
-    public ResponseEntity<UsuarioResponse> deletar(Integer id) {
-        return usuarioRepository.findById(id)
-                .map(usuario -> {
-                    usuarioRepository.deleteById(id);
-                    UsuarioResponse response = new UsuarioResponse("Usuário deletado com sucesso!", usuario);
-                    return ResponseEntity.ok(response);
-                })
-                .orElseGet(() -> {
-                    UsuarioResponse response = new UsuarioResponse("Usuário não encontrado!", null);
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-                });
+
+    public ResponseEntity<?> deletar(Integer id) {
+        if (!usuarioRepository.existsById(id)) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Usuário não encontrado!");
+        }
+
+        usuarioRepository.deleteById(id);
+        return ResponseEntity.ok("Usuário deletado com sucesso!");
+
+
     }
 }

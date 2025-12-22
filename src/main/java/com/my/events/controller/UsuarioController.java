@@ -1,6 +1,6 @@
 package com.my.events.controller;
 
-import com.my.events.DTO.UsuarioResponse;
+import com.my.events.DTO.UsuarioRequestDTO;
 import com.my.events.model.Usuario;
 import com.my.events.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +29,14 @@ public class UsuarioController {
         return service.buscarPorId(id);
     }
     @DeleteMapping("/{id}")
-    public ResponseEntity<UsuarioResponse> removerUsuario(@PathVariable("id") Integer id){
+    public ResponseEntity<?> removerUsuario(@PathVariable("id") Integer id){
         return service.deletar(id);
     }
     @PostMapping
-    public ResponseEntity<UsuarioResponse> criarUsuario(@RequestBody Usuario usuario) {
-        ResponseEntity<UsuarioResponse> salvo = service.createUser(usuario);
+    public ResponseEntity<?> criarUsuario(@RequestBody UsuarioRequestDTO usuario) {
+        service.criarUsuario(usuario);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new UsuarioResponse("Usuário criado com sucesso!", usuario));
+                .body("Usuário criado com sucesso!");
     }
 }

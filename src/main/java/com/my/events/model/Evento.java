@@ -10,10 +10,10 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-@Entity
-@Table(name = "eventos")
 @Getter
 @Setter
+@Entity
+@Table(name = "eventos")
 public class Evento {
 
     @Id
@@ -25,7 +25,7 @@ public class Evento {
     private String location;
     @Column(nullable = false)
     private LocalDate scheduleDate;
-
+    @OneToMany(mappedBy = "evento")
     public Set<Usuario> guests = new HashSet<>();
 
     @Override
