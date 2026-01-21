@@ -4,9 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Getter @Setter
 @Entity
@@ -23,9 +21,13 @@ public class Usuario {
     private String username;
     @Column(length = 100, nullable = false)
     private String password;
-    @ManyToOne
-    @JoinColumn(name = "evento_id")
-    private Evento evento;
+    @ManyToMany
+    @JoinTable(
+            name = "usuarios_eventos",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "evento_id")
+    )
+    private Set<Evento> eventos = new HashSet<>();
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "tab_user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role_id")

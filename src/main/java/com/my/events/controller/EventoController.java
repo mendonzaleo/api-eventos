@@ -38,8 +38,8 @@ public class EventoController {
         }
     }
     @PostMapping("/convidados/{id}")
-    public ResponseEntity<?> adicionarConvidados(@PathVariable("id")Integer idEvento, @RequestParam String nomeConvidado) {
-        String resposta = service.adicionarConvidado(idEvento, nomeConvidado);
+    public ResponseEntity<?> adicionarConvidados(@PathVariable("id")Integer idEvento, @RequestParam String nomeUsuario) {
+        String resposta = service.adicionarConvidado(idEvento, nomeUsuario);
         return ResponseEntity.ok(resposta);
     }
     @GetMapping

@@ -20,28 +20,29 @@ public class EventoService {
 
     Evento evento =  new Evento();
     @Autowired
-    EventoRepository repository;
+    EventoRepository eventoRepository;
     @Autowired
     UsuarioRepository usuarioRepository;
 
-    public String adicionarConvidado(Integer idEvento, String nomeConvidado){
-        Usuario usuario = usuarioRepository.findByUsername(nomeConvidado);
-
+    public String adicionarConvidado(Integer idEvento, String nomeUsuario){
+        Usuario usuario = usuarioRepository.findByUsername(nomeUsuario);
+        Evento evento = eventoRepository.findEventoById(idEvento);
         if(usuario == null) {
-            return String.format("Usuário %s não encontrado.", nomeConvidado);
+            return String.format("Usuário %s não encontrado!", nomeUsuario);
         }
-        Evento evento = repository.findEventoById(idEvento);
         if (evento == null){
-            return String.format("Evento não encontrado com o id %s", idEvento);
+            return String.format("Evento com ID %s não existe!", idEvento);
         }else{
-            evento.guests.add(usuario);
-            repository.save(evento);
+            usuario.getEventos().add(evento);
+            evento.getGuests().add(usuario);
+            usuarioRepository.save(usuario);
+            eventoRepository.save(evento);
             return String.format("%s adicionado a lista de convidados!", usuario.getUsername());
         }
     }
 
     public boolean removerConvidado(Integer idEvento, String nomeUsuario){
-        Evento eventoSelecionado = repository.findEventoById(idEvento);
+        Evento eventoSelecionado = eventoRepository.findEventoById(idEvento);
         Usuario removido = eventoSelecionado.guests.stream()
                 .filter(u -> u.getName().equalsIgnoreCase(nomeUsuario))
                 .findFirst()
@@ -56,7 +57,7 @@ public class EventoService {
     }
 
     public List<String> listarConvidados(Integer id){
-        Evento eventoConvidados = repository.findEventoById(id);
+        Evento eventoConvidados = eventoRepository.findEventoById(id);
         if(evento == null){
             return null;
         }else {
@@ -68,13 +69,13 @@ public class EventoService {
     }
 
     public List<Evento> listarEventos(){
-        List<Evento> eventosListados = repository.findAll().stream()
+        List<Evento> eventosListados = eventoRepository.findAll().stream()
                 .sorted(Comparator.comparing(Evento::getScheduleDate).reversed())
                 .toList();
         return eventosListados;
     }
     public List<Evento> listarPorAgendamento(LocalDate data){
-        return repository.findByDataAgendamento(data);
+        return eventoRepository.findByDataAgendamento(data);
     }
     public Evento criarEvento(EventoRequestDTO dto){
         Evento evento = new Evento();
@@ -82,13 +83,13 @@ public class EventoService {
         evento.setLocation(dto.getLocalizacao());
         evento.setScheduleDate(dto.getDataAgendamento());
 
-        return repository.save(evento);
+        return eventoRepository.save(evento);
     }
     public boolean removerEvento(Integer id){
-        if(repository.findEventoById(id) == null){
+        if(eventoRepository.findEventoById(id) == null){
             return false;
         }else{
-            repository.deleteById(id);
+            eventoRepository.deleteById(id);
             return true;
         }
     }

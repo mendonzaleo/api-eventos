@@ -25,7 +25,7 @@ public class Evento {
     private String location;
     @Column(nullable = false)
     private LocalDate scheduleDate;
-    @OneToMany(mappedBy = "evento")
+    @ManyToMany(mappedBy = "eventos")
     public Set<Usuario> guests = new HashSet<>();
 
     @Override
