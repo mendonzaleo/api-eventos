@@ -1,18 +1,15 @@
 package com.my.events.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -20,31 +17,29 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig {
+
     private final SecurityDatabaseService securityService;
 
     public WebSecurityConfig(SecurityDatabaseService securityService) {
         this.securityService = securityService;
     }
 
+    // 🔥 1. CRIAR AuthenticationManager da forma correta
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        AuthenticationManagerBuilder authBuilder =
-                http.getSharedObject(AuthenticationManagerBuilder.class);
-
-        authBuilder
-                .userDetailsService(securityService)
-                .passwordEncoder(passwordEncoder());
-
-        return authBuilder.build();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
     }
 
+    // 🔥 2. Password Encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // seguro
+        return new BCryptPasswordEncoder();
     }
 
+    // 🔥 3. Security Filter Chain
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/").permitAll()
@@ -54,28 +49,8 @@ public class WebSecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable()); // se estiver fazendo API REST, geralmente desabilita
+                .csrf(csrf -> csrf.disable());
 
         return http.build();
     }
-
-/*
-    @Autowired
-    private SecurityDatabaseService securityService;
-
-    @Autowired
-    public void globalUserDetails(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(securityService).passwordEncoder(NoOpPasswordEncoder.getInstance());
-    }
-
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/").permitAll()
-                .antMatchers(HttpMethod.POST,"/login").permitAll()
-                .antMatchers("/managers").hasAnyRole("MANAGERS")
-                .antMatchers("/users").hasAnyRole("USERS","MANAGERS")
-                .anyRequest().authenticated().and().httpBasic();
-    }
-    */
 }
