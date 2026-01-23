@@ -22,15 +22,15 @@ public class UsuarioService {
     public Usuario criarUsuario(UsuarioRequestDTO usuario) {
 
         Usuario usuarioCriado = new Usuario();
-        usuarioCriado.setName(usuario.getName());
-        usuarioCriado.setPassword(usuario.getPassword());
-        usuarioCriado.setUsername(usuario.getUsername());
-        String pass = usuario.getPassword();
+        usuarioCriado.setNome(usuario.getNome());
+        usuarioCriado.setSenha(usuario.getSenha());
+        usuarioCriado.setSobrenome(usuario.getSobrenome());
+        String pass = usuario.getSenha();
         //criptografando antes de salvar no banco
-        usuario.setPassword(encoder.encode(pass));
+        usuario.setSenha(encoder.encode(pass));
 
-        if (usuario.getRoles() == null || usuario.getRoles().isEmpty()) {
-            usuario.getRoles().add("ROLE_USER");
+        if (usuario.getPerfil() == null || usuario.getPerfil().isEmpty()) {
+            usuario.getPerfil().add("ROLE_USER");
         }
         Usuario savedUsuario = usuarioRepository.save(usuarioCriado);
         return usuarioCriado;
@@ -49,17 +49,17 @@ public class UsuarioService {
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         // atualiza os campos necessários
-        existente.setName(usuario.getName());
-        existente.setUsername(usuario.getUsername());
+        existente.setNome(usuario.getNome());
+        existente.setSobrenome(usuario.getSobrenome());
 
         // se senha foi enviada, reencoda
-        if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
-            existente.setPassword(encoder.encode(usuario.getPassword()));
+        if (usuario.getSenha() != null && !usuario.getSenha().isBlank()) {
+            existente.setSenha(encoder.encode(usuario.getSenha()));
         }
 
         // se roles vieram, atualiza; senão mantém
-        if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
-            existente.setRoles(usuario.getRoles());
+        if (usuario.getPerfis() != null && !usuario.getPerfis().isEmpty()) {
+            existente.setPerfis(usuario.getPerfis());
         }
 
         return usuarioRepository.save(existente);

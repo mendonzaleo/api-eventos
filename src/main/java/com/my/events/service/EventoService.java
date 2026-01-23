@@ -34,24 +34,24 @@ public class EventoService {
             return String.format("Evento com ID %s não existe!", idEvento);
         }else{
             usuario.getEventos().add(evento);
-            evento.getGuests().add(usuario);
+            evento.getConvidados().add(usuario);
             usuarioRepository.save(usuario);
             eventoRepository.save(evento);
-            return String.format("%s adicionado a lista de convidados!", usuario.getUsername());
+            return String.format("%s adicionado a lista de convidados!", usuario.getSobrenome());
         }
     }
 
     public boolean removerConvidado(Integer idEvento, String nomeUsuario){
         Evento eventoSelecionado = eventoRepository.findEventoById(idEvento);
-        Usuario removido = eventoSelecionado.guests.stream()
-                .filter(u -> u.getName().equalsIgnoreCase(nomeUsuario))
+        Usuario removido = eventoSelecionado.convidados.stream()
+                .filter(u -> u.getNome().equalsIgnoreCase(nomeUsuario))
                 .findFirst()
                 .orElse(null);
 
                 if(removido == null){
                     return false;
                 }else{
-                    evento.guests.remove(removido);
+                    evento.convidados.remove(removido);
                     return true;
                 }
     }
@@ -61,8 +61,8 @@ public class EventoService {
         if(evento == null){
             return null;
         }else {
-            return eventoConvidados.guests.stream()
-                    .map(Usuario::getName)
+            return eventoConvidados.convidados.stream()
+                    .map(Usuario::getNome)
                     .sorted()
                     .toList();
         }
@@ -70,7 +70,7 @@ public class EventoService {
 
     public List<Evento> listarEventos(){
         List<Evento> eventosListados = eventoRepository.findAll().stream()
-                .sorted(Comparator.comparing(Evento::getScheduleDate).reversed())
+                .sorted(Comparator.comparing(Evento::getDataAgendamento))
                 .toList();
         return eventosListados;
     }
@@ -79,9 +79,9 @@ public class EventoService {
     }
     public Evento criarEvento(EventoRequestDTO dto){
         Evento evento = new Evento();
-        evento.setName(dto.getNome());
-        evento.setLocation(dto.getLocalizacao());
-        evento.setScheduleDate(dto.getDataAgendamento());
+        evento.setNome(dto.getNome());
+        evento.setLocalizacao(dto.getLocalizacao());
+        evento.setDataAgendamento(dto.getDataAgendamento());
 
         return eventoRepository.save(evento);
     }

@@ -19,17 +19,17 @@ public class SecurityDatabaseService implements UserDetailsService {
     @Autowired
     private UsuarioRepository userRepository;
     @Override
-    public UserDetails loadUserByUsername(String username) {
-        Usuario userEntity = userRepository.findByUsername(username);
+    public UserDetails loadUserByUsername(String nome) {
+        Usuario userEntity = userRepository.findByUsername(nome);
         if (userEntity == null) {
-            throw new UsernameNotFoundException(username);
+            throw new UsernameNotFoundException(nome);
         }
         Set<GrantedAuthority> authorities = new HashSet<GrantedAuthority>();
-        userEntity.getRoles().forEach(role -> {
+        userEntity.getPerfis().forEach(role -> {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
         });
-        UserDetails user = new org.springframework.security.core.userdetails.User(userEntity.getUsername(),
-                userEntity.getPassword(),
+        UserDetails user = new org.springframework.security.core.userdetails.User(userEntity.getSobrenome(),
+                userEntity.getSenha(),
                 authorities);
         return user;
     }
