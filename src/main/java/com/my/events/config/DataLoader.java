@@ -26,10 +26,10 @@ public class DataLoader implements CommandLineRunner {
     public void run(String... args) {
         if (usuarioRepository.count() == 0) {
             Usuario admin = new Usuario();
-            admin.setName("Leonardo");
-            admin.setUsername("admin");
-            admin.setPassword(passwordEncoder.encode("123456")); // senha criptografada com BCrypt
-            admin.setRoles(Collections.singletonList("MANAGERS"));
+            admin.setNome("Leonardo");
+            admin.setSobrenome("admin");
+            admin.setSenha(passwordEncoder.encode("123456")); // senha criptografada com BCrypt
+            admin.setPerfis(Collections.singletonList("MANAGERS"));
 
             usuarioRepository.save(admin);
 

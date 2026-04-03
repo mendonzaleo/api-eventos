@@ -8,8 +8,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario,Integer> {
-    @Query("SELECT e FROM Usuario e JOIN FETCH e.roles WHERE e.username= (:username)")
-    public Usuario findByUsername(@Param("username") String username);
-    boolean existsByUsername(String username);
+    @Query("SELECT e FROM Usuario e JOIN FETCH e.perfis WHERE e.nome= (:nome)")
+    public Usuario findByUsername(@Param("nome") String nome);
+    boolean existsByNome(String nome);
 
 }

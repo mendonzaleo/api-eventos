@@ -28,14 +28,13 @@ public class EventoService {
         Usuario usuario = usuarioRepository.findByUsername(nomeConvidado);
 
         if(usuario == null) {
-            return String.format("Usuário %s não encontrado!", nomeConvidado);
+            return String.format("Usuário %s não encontrado.", nomeConvidado);
         }
         Evento evento = repository.findEventoById(idEvento);
         if (evento == null){
-            return String.format("Evento com ID %s não existe!", idEvento);
+            return String.format("Evento não encontrado com o id %s", idEvento);
         }else{
             evento.guests.add(usuario);
-            usuarioRepository.save(usuario);
             repository.save(evento);
             return String.format("%s adicionado a lista de convidados!", usuario.getUsername());
         }
@@ -43,31 +42,25 @@ public class EventoService {
 
     public boolean removerConvidado(Integer idEvento, String nomeUsuario){
         Evento eventoSelecionado = repository.findEventoById(idEvento);
-        if (eventoSelecionado == null){
-            return false;
-        }
         Usuario removido = eventoSelecionado.guests.stream()
-                .filter(u -> u.getUsername().equalsIgnoreCase(nomeUsuario))
+                .filter(u -> u.getName().equalsIgnoreCase(nomeUsuario))
                 .findFirst()
                 .orElse(null);
 
-        if(removido == null){
-            return false;
-        }else{
-            eventoSelecionado.getGuests().remove(removido);
-            repository.save(eventoSelecionado);
-            return true;
-        }
-
-
+                if(removido == null){
+                    return false;
+                }else{
+                    evento.guests.remove(removido);
+                    return true;
+                }
     }
 
     public List<String> listarConvidados(Integer id){
         Evento eventoConvidados = repository.findEventoById(id);
-        if(eventoConvidados == null){
+        if(evento == null){
             return null;
         }else {
-            return eventoConvidados.getGuests().stream()
+            return eventoConvidados.guests.stream()
                     .map(Usuario::getName)
                     .sorted()
                     .toList();
@@ -92,8 +85,7 @@ public class EventoService {
         return repository.save(evento);
     }
     public boolean removerEvento(Integer id){
-        Evento eventoRemovido = repository.findEventoById(id);
-        if(eventoRemovido == null){
+        if(repository.findEventoById(id) == null){
             return false;
         }else{
             repository.deleteById(id);

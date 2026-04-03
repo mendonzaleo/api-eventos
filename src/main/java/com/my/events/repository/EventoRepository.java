@@ -15,7 +15,7 @@ public interface EventoRepository extends JpaRepository<Evento, Integer> {
     Evento findEventoById(@Param("id") Integer id);
 
     // Consulta eventos por data de agendamento
-    @Query("SELECT e FROM Evento e WHERE e.scheduleDate = :data")
+    @Query("SELECT e FROM Evento e WHERE e.dataAgendamento = :data")
     List<Evento> findByDataAgendamento(@Param("data") LocalDate data);
 
     // Se quiser verificar se existe um evento nessa data

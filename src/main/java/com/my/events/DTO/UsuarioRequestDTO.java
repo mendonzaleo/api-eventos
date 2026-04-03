@@ -11,14 +11,14 @@ import java.util.List;
 @Setter
 public class UsuarioRequestDTO {
     @NotBlank(message = "O nome do usuário é obrigatório")
-    private String name;
+    private String nome;
 
     @NotBlank(message = "O username é obrigatório")
-    private String username;
+    private String sobrenome;
 
     @NotBlank(message = "A senha é obrigatória")
-    private String password;
+    private String senha;
 
     @NotEmpty(message = "O usuário deve possuir ao menos um perfil")
-    private List<String> roles;
+    private List<String> perfil;
 }

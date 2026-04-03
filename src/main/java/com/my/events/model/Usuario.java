@@ -1,15 +1,18 @@
 package com.my.events.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @Getter @Setter
 @Entity
+@Schema(hidden = true)
 @Table(name = "tab_user")
 public class Usuario {
 
@@ -17,19 +20,26 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_user")
     private Integer id;
-    @Column(length = 55, nullable = false)
-    private String name;
-    @Column(length = 40, nullable = false)
-    private String username;
-    @Column(length = 100, nullable = false)
-    private String password;
-    @ManyToOne
-    @JoinColumn(name = "evento_id")
-    private Evento evento;
+    @Column(length = 55, nullable = false, name = "name")
+    private String nome;
+    @Column(length = 40, nullable = false, name = "username")
+    private String sobrenome;
+    @JsonIgnore
+    @Column(length = 100, nullable = false, name="password")
+    private String senha;
+    @ManyToMany
+    @JoinTable(
+            name = "usuarios_eventos",
+            joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "evento_id")
+    )
+    @JsonIgnore
+    private Set<Evento> eventos = new HashSet<>();
+    @JsonIgnore
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "tab_user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role_id")
-    private List<String> roles = new ArrayList<>();
+    private List<String> perfis = new ArrayList<>();
 
     @Override
     public boolean equals(Object o) {
