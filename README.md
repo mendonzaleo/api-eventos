@@ -98,7 +98,6 @@ logging.level.org.springframework=DEBUG
 logging.level.com.meus.eventos=TRACE
 ```
 
-> ⚠️ **Atenção:** nunca suba credenciais reais para o repositório. Em produção, utilize variáveis de ambiente ou um gerenciador de segredos (ex: AWS Secrets Manager, Vault).
 
 ---
 
@@ -246,8 +245,6 @@ Exemplo com `curl`:
 ```bash
 curl -u lmendonza:minhasenha123 http://localhost:9090/eventos
 ```
-
-> ⚠️ **Importante:** Basic Auth transmite credenciais em Base64, que é reversível. Em produção, **sempre use HTTPS** para proteger as credenciais em trânsito.
 
 ### Futuro: Migração para JWT
 
