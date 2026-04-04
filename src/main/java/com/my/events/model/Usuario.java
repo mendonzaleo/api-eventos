@@ -23,7 +23,7 @@ public class Usuario {
     @Column(length = 55, nullable = false, name = "name")
     private String nome;
     @Column(length = 40, nullable = false, name = "username")
-    private String sobrenome;
+    private String username;
     @JsonIgnore
     @Column(length = 100, nullable = false, name="password")
     private String senha;

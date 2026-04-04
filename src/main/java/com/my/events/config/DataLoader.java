@@ -27,7 +27,7 @@ public class DataLoader implements CommandLineRunner {
         if (usuarioRepository.count() == 0) {
             Usuario admin = new Usuario();
             admin.setNome("Leonardo");
-            admin.setSobrenome("admin");
+            admin.setUsername("admin");
             admin.setSenha(passwordEncoder.encode("123456")); // senha criptografada com BCrypt
             admin.setPerfis(Collections.singletonList("MANAGERS"));
 

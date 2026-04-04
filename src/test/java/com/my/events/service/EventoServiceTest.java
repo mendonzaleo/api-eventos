@@ -1,6 +1,10 @@
 package com.my.events.service;
 
-import com.my.events.DTO.EventoRequestDTO;
+import com.my.events.DTO.EventoCreateDTO;
+import com.my.events.DTO.EventoDTO;
+import com.my.events.DTO.UsuarioDTO;
+import com.my.events.exception.EventoNaoEncontradoException;
+import com.my.events.exception.UsuarioNaoEncontradoException;
 import com.my.events.model.Evento;
 import com.my.events.model.Usuario;
 import com.my.events.repository.EventoRepository;
@@ -40,15 +44,17 @@ class EventoServiceTest {
     void setup() {
         evento = new Evento();
         evento.setId(1);
-        evento.setName("Festa");
-        evento.setScheduleDate(LocalDate.now());
-        evento.setGuests(new HashSet<>());
+        evento.setNome("Festa");
+        evento.setDataAgendamento(LocalDate.now());
+        evento.setConvidados(new HashSet<>());
 
         usuario = new Usuario();
         usuario.setId(1);
-        usuario.setName("Joao");
+        usuario.setNome("Joao");
         usuario.setUsername("Silva");
-        usuario.setRoles(new ArrayList<>());
+        usuario.setPerfis(new ArrayList<>());
+
+
     }
 
     @Test
@@ -56,12 +62,12 @@ class EventoServiceTest {
         when(usuarioRepository.findByUsername("Joao")).thenReturn(usuario);
         when(eventoRepository.findEventoById(1)).thenReturn(evento);
 
-        String resultado = eventoService.adicionarConvidado(1, "Joao");
+        boolean resultado = eventoService.adicionarConvidado(1, "Joao");
 
-        assertEquals("Silva adicionado a lista de convidados!", resultado);
-        assertTrue(evento.getGuests().contains(usuario));
+        assertTrue(resultado, "O método deveria retornar true quando o convidado é adicionado");
 
-        verify(usuarioRepository).save(usuario);
+        assertTrue(evento.getConvidados().contains(usuario), "O convidado deve estar na lista do evento");
+
         verify(eventoRepository).save(evento);
     }
 
@@ -69,40 +75,36 @@ class EventoServiceTest {
     void naoDeveAdicionarSeUsuarioNaoExistir() {
         when(usuarioRepository.findByUsername("Silva")).thenReturn(null);
 
-        String resultado = eventoService.adicionarConvidado(1, "Silva");
-
-        assertEquals("Usuário Silva não encontrado!", resultado);
-        verify(eventoRepository, never()).save(any());
+        assertThrows(UsuarioNaoEncontradoException.class,
+                () -> eventoService.adicionarConvidado(1, "Silva"));
     }
 
     @Test
     void naoDeveAdicionarSeEventoNaoExistir() {
-        when(usuarioRepository.findByUsername("Joao")).thenReturn(usuario);
+        when(usuarioRepository.findByUsername("Silva")).thenReturn(usuario);
         when(eventoRepository.findEventoById(1)).thenReturn(null);
 
-        String resultado = eventoService.adicionarConvidado(1, "Joao");
-
-        assertEquals("Evento com ID 1 não existe!", resultado);
+        assertThrows(EventoNaoEncontradoException.class,
+                () -> eventoService.adicionarConvidado(1, "Silva"));
     }
 
     @Test
     void deveRemoverConvidadoComSucesso() {
-        evento.getGuests().add(usuario);
+        evento.getConvidados().add(usuario);
         when(eventoRepository.findEventoById(1)).thenReturn(evento);
 
         boolean resultado = eventoService.removerConvidado(1, "Silva");
 
         assertTrue(resultado);
-        assertFalse(evento.getGuests().contains(usuario));
+        assertFalse(evento.getConvidados().contains(usuario));
     }
 
     @Test
     void naoDeveRemoverSeEventoNaoExistir() {
         when(eventoRepository.findEventoById(1)).thenReturn(null);
 
-        boolean resultado = eventoService.removerConvidado(1, "Joao");
-
-        assertFalse(resultado);
+        assertThrows(EventoNaoEncontradoException.class,
+                () -> eventoService.removerConvidado(1, "Joao"));
     }
 
     @Test
@@ -115,36 +117,67 @@ class EventoServiceTest {
     }
 
     @Test
-    void deveListarConvidadosOrdenados() {
-        Usuario u1 = new Usuario();
-        u1.setName("Carlos");
-        u1.setId(1);
+    void deveListarConvidadosQuandoEventoExiste() {
+        Usuario usuario1 = new Usuario();
+        usuario1.setId(1);
+        usuario1.setNome("Alice");
+        usuario1.setUsername("alice123");
 
-        Usuario u2 = new Usuario();
-        u2.setName("Ana");
-        u2.setId(2);
+        Usuario usuario2 = new Usuario();
+        usuario2.setId(2);
+        usuario2.setNome("Bob");
+        usuario2.setUsername("bob123");
 
-        evento.setGuests(Set.of(u1, u2));
+        Set<Usuario> convidados = new HashSet<>();
+        convidados.add(usuario1);
+        convidados.add(usuario2);
+        evento.setConvidados(convidados);
 
         when(eventoRepository.findEventoById(1)).thenReturn(evento);
 
-        List<String> nomes = eventoService.listarConvidados(1);
+        List<UsuarioDTO> resultado = eventoService.listarConvidados(1);
 
-        assertEquals(List.of("Ana", "Carlos"), nomes);
+        assertNotNull(resultado, "A lista de convidados não deve ser nula");
+        assertEquals(2, resultado.size(), "O evento deve ter 2 convidados");
+
+        List<String> nomes = resultado.stream()
+                .map(UsuarioDTO::getNome)
+                .toList();
+        assertTrue(nomes.contains("Alice"), "Deve conter Alice na lista");
+        assertTrue(nomes.contains("Bob"), "Deve conter Bob na lista");
+
+        List<String> nomesOrdenados = resultado.stream()
+                .map(UsuarioDTO::getNome)
+                .sorted()
+                .toList();
+        assertEquals(nomesOrdenados, nomes.stream().sorted().toList(), "A lista deve estar ordenada");
     }
 
     @Test
-    void deveRetornarNullSeEventoNaoExistir() {
-        when(eventoRepository.findEventoById(1)).thenReturn(null);
+    void deveRetornarListaVaziaQuandoEventoNaoExiste() {
+        when(eventoRepository.findEventoById(2)).thenReturn(null);
 
-        List<String> resultado = eventoService.listarConvidados(1);
+        List<UsuarioDTO> resultado = eventoService.listarConvidados(2);
 
-        assertNull(resultado);
+        assertNotNull(resultado, "A lista de convidados não deve ser nula mesmo que o evento não exista");
+        assertTrue(resultado.isEmpty(), "A lista deve estar vazia quando o evento não existe");
+    }
+
+    @Test
+    void deveListarConvidadosVaziaQuandoEventoExisteMasNaoTemConvidados() {
+        evento.setConvidados(new HashSet<>());
+
+        when(eventoRepository.findEventoById(1)).thenReturn(evento);
+
+        List<UsuarioDTO> resultado = eventoService.listarConvidados(1);
+
+        assertNotNull(resultado, "A lista de convidados não deve ser nula");
+        assertTrue(resultado.isEmpty(), "A lista deve estar vazia quando o evento não tem convidados");
     }
 
     @Test
     void deveCriarEvento() {
-        EventoRequestDTO dto = new EventoRequestDTO();
+        EventoCreateDTO dto = new EventoCreateDTO();
         dto.setNome("Show");
         dto.setLocalizacao("SP");
         dto.setDataAgendamento(LocalDate.now());
@@ -152,10 +185,10 @@ class EventoServiceTest {
         when(eventoRepository.save(any(Evento.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        Evento criado = eventoService.criarEvento(dto);
+        EventoDTO criado = eventoService.criarEvento(dto);
 
-        assertEquals("Show", criado.getName());
-        assertEquals("SP", criado.getLocation());
+        assertEquals("Show", criado.getNome());
+        assertEquals("SP", criado.getLocalizacao());
     }
 
     @Test

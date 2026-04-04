@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
-public class EventoRequestDTO {
+public class EventoDTO {
     @NotBlank(message = "Nome do evento é obrigatório")
     private String nome;
 

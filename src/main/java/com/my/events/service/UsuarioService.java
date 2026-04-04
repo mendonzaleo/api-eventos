@@ -1,7 +1,9 @@
 package com.my.events.service;
 
-import com.my.events.DTO.UsuarioRequestDTO;
-import com.my.events.model.Evento;
+import com.my.events.DTO.UsuarioCreateDTO;
+import com.my.events.DTO.UsuarioDTO;
+import com.my.events.DTO.UsuarioUpdateDTO;
+import com.my.events.exception.EventoDadosInvalidosException;
 import com.my.events.model.Usuario;
 import com.my.events.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -19,61 +22,79 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder encoder;
 
-    public Usuario criarUsuario(UsuarioRequestDTO usuario) {
+    private UsuarioDTO toDTO(Usuario usuario) {
+        return new UsuarioDTO(
+                usuario.getId(),
+                usuario.getNome(),
+                usuario.getUsername()
+        );
+    }
 
+    public UsuarioDTO criarUsuario(UsuarioCreateDTO dto) {
         Usuario usuarioCriado = new Usuario();
-        usuarioCriado.setNome(usuario.getNome());
-        usuarioCriado.setSenha(usuario.getSenha());
-        usuarioCriado.setSobrenome(usuario.getSobrenome());
-        String pass = usuario.getSenha();
-        //criptografando antes de salvar no banco
-        usuario.setSenha(encoder.encode(pass));
+        if(dto.getNome() == null || dto.getNome().isBlank()){
+            throw new EventoDadosInvalidosException("O nome do usuário é obrigatório!");
+        }
+        usuarioCriado.setNome(dto.getNome());
+        if (dto.getUsername() == null || dto.getUsername().isBlank()){
+            throw new EventoDadosInvalidosException("O username é obrigatório!");
+        }
+        usuarioCriado.setUsername(dto.getUsername());
+        if (dto.getSenha() == null || dto.getSenha().isBlank()){
+            throw new EventoDadosInvalidosException("A senha é obrigatória!");
+        }
+        usuarioCriado.setSenha(encoder.encode(dto.getSenha()));
 
-        if (usuario.getPerfil() == null || usuario.getPerfil().isEmpty()) {
-            usuario.getPerfil().add("ROLE_USER");
+        if (usuarioCriado.getPerfis() == null || usuarioCriado.getPerfis().isEmpty()) {
+            usuarioCriado.setPerfis(new ArrayList<>(List.of("ROLE_USER")));
         }
         Usuario savedUsuario = usuarioRepository.save(usuarioCriado);
-        return usuarioCriado;
+        return new UsuarioDTO(
+                savedUsuario.getId(),
+                savedUsuario.getNome(),
+                savedUsuario.getUsername()
+        );
     }
 
-    public List<Usuario> listarTodos() {
-        return usuarioRepository.findAll();
+    public List<UsuarioDTO> listarTodos() {
+        return usuarioRepository.findAll()
+                .stream()
+                .map(this::toDTO)
+                .toList();
     }
 
-    public Usuario buscarPorId(Integer id) {
-        return usuarioRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+    public UsuarioDTO buscarPorId(Integer id) {
+        Usuario usuarioProcurado = usuarioRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        return toDTO(usuarioProcurado);
     }
 
-    public Usuario atualizar(Integer id, Usuario usuario) {
+    public UsuarioDTO atualizar(Integer id, UsuarioUpdateDTO dto) {
         Usuario existente = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        // atualiza os campos necessários
-        existente.setNome(usuario.getNome());
-        existente.setSobrenome(usuario.getSobrenome());
-
-        // se senha foi enviada, reencoda
-        if (usuario.getSenha() != null && !usuario.getSenha().isBlank()) {
-            existente.setSenha(encoder.encode(usuario.getSenha()));
+        if (dto.getNome() != null) {
+            existente.setNome(dto.getNome());
         }
 
-        // se roles vieram, atualiza; senão mantém
-        if (usuario.getPerfis() != null && !usuario.getPerfis().isEmpty()) {
-            existente.setPerfis(usuario.getPerfis());
+        if (dto.getUsername() != null) {
+            existente.setUsername(dto.getUsername());
         }
 
-        return usuarioRepository.save(existente);
+        if (dto.getSenha() != null && !dto.getSenha().isBlank()) {
+            existente.setSenha(encoder.encode(dto.getSenha()));
+        }
+
+        return toDTO(usuarioRepository.save(existente));
     }
 
-    public ResponseEntity<?> deletar(Integer id) {
+    public Boolean deletar(Integer id) {
         if (!usuarioRepository.existsById(id)) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body("Usuário não encontrado!");
+            return false;
+        }else {
+            usuarioRepository.deleteById(id);
+            return true;
         }
-
-        usuarioRepository.deleteById(id);
-        return ResponseEntity.ok("Usuário deletado com sucesso!");
 
 
     }
