@@ -36,6 +36,7 @@ Permite criar eventos, gerenciar convidados e controlar o acesso por perfis de u
 | Lombok | (gerenciada) | Redução de boilerplate (getters, setters) |
 | SpringDoc OpenAPI | 2.8.16 | Geração automática do Swagger UI |
 | Jakarta Validation | 3.0.2 | Validação de dados de entrada |
+| jjwt-api / jjwt-impl / jjwt-jackson | 0.12.6 | Geração e validação de tokens JWT |
 | Maven | (wrapper incluso) | Gerenciamento de dependências e build |
 
 ---
@@ -80,8 +81,8 @@ server.port=9090
 
 # Conexão com o PostgreSQL
 spring.datasource.url=jdbc:postgresql://localhost:5432/db_events
-spring.datasource.username= #usuário do banco dedados aqui
-spring.datasource.password= #senha do banco de dados aqui
+spring.datasource.username=postgres
+spring.datasource.password=admin
 
 # JPA / Hibernate
 spring.jpa.hibernate.ddl-auto=update
@@ -92,12 +93,22 @@ spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 # Pool de conexões
 spring.datasource.hikari.maximum-pool-size=5
 
+# JWT
+jwt.secret=sua-chave-secreta-minimo-32-caracteres-aqui
+jwt.expiration=3600000
+
 # Logging
 logging.level.root=INFO
 logging.level.org.springframework=DEBUG
 logging.level.com.meus.eventos=TRACE
 ```
 
+> ⚠️ **Atenção:** nunca suba credenciais reais para o repositório. O `jwt.secret` deve ter no mínimo 32 caracteres (256 bits). Em produção, utilize variáveis de ambiente:
+>
+> ```properties
+> jwt.secret=${JWT_SECRET}
+> jwt.expiration=${JWT_EXPIRATION:3600000}
+> ```
 
 ---
 
@@ -149,11 +160,49 @@ Acesse após iniciar a aplicação:
 http://localhost:9090/swagger-ui/index.html
 ```
 
-No Swagger UI você pode visualizar todos os endpoints, seus parâmetros, modelos de requisição e resposta, e executar chamadas diretamente pelo navegador utilizando autenticação Basic Auth.
+No Swagger UI você pode visualizar todos os endpoints, seus parâmetros, modelos de requisição e resposta, e executar chamadas diretamente pelo navegador. A autenticação pode ser feita de duas formas:
+
+- **Basic Auth:** clique em **Authorize**, selecione *BasicAuth* e informe username e senha.
+- **JWT:** obtenha um token via `POST /auth/login`, clique em **Authorize**, selecione *BearerAuth* e cole o token no campo `Value` no formato `Bearer <token>`.
 
 ---
 
 ## 🔗 Endpoints
+
+### Autenticação — `/auth`
+
+| Método | Endpoint | Descrição | Auth |
+|--------|----------|-----------|------|
+| `POST` | `/auth/login` | Autentica o usuário e retorna um token JWT | ❌ Não |
+
+#### Exemplo — Login e obtenção do token
+
+**Request:**
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "username": "lmendonza",
+  "senha": "minhasenha123"
+}
+```
+
+**Response `200 OK`:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsbWVuZG9uemEi...",
+  "tipo": "Bearer",
+  "expiracao": "2025-10-20T16:30:00"
+}
+```
+
+Use o token retornado nas próximas requisições via header:
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+---
 
 ### Eventos — `/eventos`
 
@@ -167,13 +216,28 @@ No Swagger UI você pode visualizar todos os endpoints, seus parâmetros, modelo
 | `POST` | `/eventos/convidados/{id}` | Adiciona um convidado ao evento pelo username | ✅ Sim |
 | `DELETE` | `/eventos/convidados/{id}` | Remove um convidado do evento pelo nome | ✅ Sim |
 
-#### Exemplo — Criar evento
+#### Exemplo — Criar evento (com Basic Auth)
 
 **Request:**
 ```http
 POST /eventos
 Content-Type: application/json
 Authorization: Basic dXN1YXJpbzpzZW5oYQ==
+
+{
+  "nome": "Workshop de Spring Boot",
+  "localizacao": "Auditório B, Bloco 2",
+  "dataAgendamento": "2025-09-15"
+}
+```
+
+#### Exemplo — Criar evento (com JWT)
+
+**Request:**
+```http
+POST /eventos
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 
 {
   "nome": "Workshop de Spring Boot",
@@ -232,9 +296,13 @@ Content-Type: application/json
 
 ## 🔐 Autenticação
 
-A API utiliza **HTTP Basic Authentication**.
+A API suporta dois métodos de autenticação que coexistem. O cliente pode escolher qual utilizar em cada requisição.
 
-Todas as requisições (exceto `POST /login`) exigem o cabeçalho:
+---
+
+### Método 1 — HTTP Basic Auth
+
+Envie as credenciais codificadas em Base64 no header de cada requisição:
 
 ```http
 Authorization: Basic <base64(username:senha)>
@@ -246,14 +314,60 @@ Exemplo com `curl`:
 curl -u lmendonza:minhasenha123 http://localhost:9090/eventos
 ```
 
-### Futuro: Migração para JWT
+> ⚠️ **Importante:** Basic Auth transmite credenciais em Base64, que é reversível. Em produção, **sempre use HTTPS**.
 
-A autenticação por **JWT (JSON Web Token)** está planejada para uma versão futura. A migração consistirá em:
+---
 
-1. Adicionar a dependência `spring-boot-starter-oauth2-resource-server`
-2. Criar um endpoint `POST /login` que retorna o token
-3. Substituir `.httpBasic()` por validação de Bearer token no `SecurityFilterChain`
-4. Atualizar os testes para usar `.with(jwt())` do `spring-security-test`
+### Método 2 — JWT (JSON Web Token)
+
+**Passo 1 — Obter o token:**
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "username": "lmendonza",
+  "senha": "minhasenha123"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tipo": "Bearer",
+  "expiracao": "2025-10-20T16:30:00"
+}
+```
+
+**Passo 2 — Usar o token nas requisições:**
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+Exemplo com `curl`:
+
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
+     http://localhost:9090/eventos
+```
+
+**Configuração do token (`application.properties`):**
+
+| Propriedade | Descrição |
+|---|---|
+| `jwt.secret` | Chave de assinatura do token (mínimo 32 caracteres) |
+| `jwt.expiration` | Tempo de vida em milissegundos (`3600000` = 1 hora) |
+
+> 💡 O token expira após o tempo configurado. Após a expiração, o cliente deve autenticar novamente em `POST /auth/login` para obter um novo token.
+
+---
+
+### Como os dois métodos coexistem
+
+O `JwtAuthFilter` verifica se a requisição contém um header `Authorization: Bearer ...`. Se sim, valida o token JWT e autentica o usuário. Caso contrário, o filtro é ignorado e o Spring Security processa normalmente via Basic Auth. Cada requisição é autenticada de forma independente — a API é completamente stateless.
 
 ---
 
@@ -434,6 +548,44 @@ sequenceDiagram
 
 ---
 
+### Fluxo de Autenticação — JWT
+
+```mermaid
+sequenceDiagram
+    actor Cliente
+    participant Auth as AuthController
+    participant Manager as AuthenticationManager
+    participant JwtService as JwtService
+    participant JwtFilter as JwtAuthFilter
+    participant SDS as SecurityDatabaseService
+
+    Note over Cliente, JwtService: Passo 1 — Obter o token
+    Cliente->>Auth: POST /auth/login (username + senha)
+    Auth->>Manager: authenticate(username, senha)
+    Manager->>SDS: loadUserByUsername(username)
+    SDS-->>Manager: UserDetails
+    Manager-->>Auth: Authentication válida
+    Auth->>JwtService: gerarToken(userDetails)
+    JwtService-->>Auth: token JWT assinado
+    Auth-->>Cliente: 200 OK + { token, tipo, expiracao }
+
+    Note over Cliente, SDS: Passo 2 — Usar o token
+    Cliente->>JwtFilter: GET /eventos (Authorization: Bearer <token>)
+    JwtFilter->>JwtService: extrairUsername(token)
+    JwtService-->>JwtFilter: username
+    JwtFilter->>SDS: loadUserByUsername(username)
+    SDS-->>JwtFilter: UserDetails
+    JwtFilter->>JwtService: isTokenValido(token, userDetails)
+    alt Token inválido ou expirado
+        JwtFilter-->>Cliente: 401 Unauthorized
+    else Token válido
+        JwtFilter->>JwtFilter: Seta SecurityContext
+        JwtFilter-->>Cliente: Requisição prossegue normalmente
+    end
+```
+
+---
+
 ### Fluxo de Adição de Convidado
 
 ```mermaid
@@ -459,28 +611,35 @@ api-eventos/
 │   ├── main/
 │   │   ├── java/com/my/events/
 │   │   │   ├── controller/
-│   │   │   │   ├── EventoController.java      # Endpoints de eventos
-│   │   │   │   └── UsuarioController.java     # Endpoints de usuários
+│   │   │   │   ├── AuthController.java         # Endpoint de login JWT
+│   │   │   │   ├── EventoController.java       # Endpoints de eventos
+│   │   │   │   └── UsuarioController.java      # Endpoints de usuários
 │   │   │   ├── DTO/
 │   │   │   │   ├── EventoCreateDTO.java
 │   │   │   │   ├── EventoDTO.java
 │   │   │   │   ├── EventoUpdateDTO.java
+│   │   │   │   ├── LoginRequestDTO.java
+│   │   │   │   ├── LoginResponseDTO.java
 │   │   │   │   ├── UsuarioCreateDTO.java
 │   │   │   │   ├── UsuarioDTO.java
 │   │   │   │   └── UsuarioUpdateDTO.java
 │   │   │   ├── exception/
 │   │   │   │   ├── EventoDadosInvalidosException.java
 │   │   │   │   ├── EventoNaoEncontradoException.java
+│   │   │   │   ├── GlobalExceptionHandler.java
+│   │   │   │   ├── UsuarioDadosInvalidosException.java
 │   │   │   │   └── UsuarioNaoEncontradoException.java
 │   │   │   ├── model/
-│   │   │   │   ├── Evento.java                # Entidade JPA
-│   │   │   │   └── Usuario.java               # Entidade JPA
+│   │   │   │   ├── Evento.java                 # Entidade JPA
+│   │   │   │   └── Usuario.java                # Entidade JPA
 │   │   │   ├── repository/
 │   │   │   │   ├── EventoRepository.java
 │   │   │   │   └── UsuarioRepository.java
 │   │   │   ├── security/
-│   │   │   │   ├── SecurityDatabaseService.java  # UserDetailsService
-│   │   │   │   └── WebSecurityConfig.java         # SecurityFilterChain
+│   │   │   │   ├── JwtAuthFilter.java          # Filtro de validação JWT
+│   │   │   │   ├── JwtService.java             # Geração e validação de tokens
+│   │   │   │   ├── SecurityDatabaseService.java # UserDetailsService
+│   │   │   │   └── WebSecurityConfig.java      # SecurityFilterChain
 │   │   │   ├── service/
 │   │   │   │   ├── EventoService.java
 │   │   │   │   └── UsuarioService.java
@@ -489,9 +648,16 @@ api-eventos/
 │   │       └── application.properties
 │   └── test/
 │       └── java/com/my/events/
+│           ├── config/
+│           │   └── TestSecurityConfig.java     # Config de segurança para testes
+│           ├── controller/
+│           │   ├── EventoControllerTest.java
+│           │   └── UsuarioControllerTest.java
 │           └── service/
 │               ├── EventoServiceTest.java
 │               └── UsuarioServiceTest.java
+├── src/test/resources/
+│   └── application.properties                  # Propriedades para testes
 ├── .gitignore
 ├── mvnw
 ├── mvnw.cmd
@@ -506,11 +672,14 @@ api-eventos/
 - [x] CRUD de usuários
 - [x] Gerenciamento de convidados por evento
 - [x] Autenticação via Basic Auth
+- [x] Autenticação via JWT (Bearer Token)
+- [x] Dois métodos de autenticação coexistindo (Basic Auth + JWT)
 - [x] Controle de acesso por perfis (`ROLE_USER`, `ROLE_MANAGERS`)
 - [x] Documentação automática com Swagger UI
 - [x] Testes unitários na camada de service
-- [ ] Migração para autenticação via JWT
-- [ ] Testes de integração com MockMvc
+- [x] Testes de integração dos controllers com MockMvc
+- [x] Tratamento centralizado de exceções (`GlobalExceptionHandler`)
+- [x] Validação de dados com Jakarta Validation nas DTOs
 - [ ] Paginação nos endpoints de listagem
 - [ ] Variáveis de ambiente para configuração sensível
 - [ ] Containerização com Docker e Docker Compose
