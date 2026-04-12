@@ -2,12 +2,14 @@ package com.my.events.controller;
 
 import com.my.events.DTO.EventoCreateDTO;
 import com.my.events.DTO.EventoDTO;
+import com.my.events.DTO.UsuarioDTO;
 import com.my.events.service.EventoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,10 +33,11 @@ public class EventoController {
     public ResponseEntity<?> listarConvidados(
             @Parameter(description = "ID do evento", required = true)
             @PathVariable("idEvento") Integer idEvento) {
-        if (service.listarConvidados(idEvento).isEmpty()) {
+        List<UsuarioDTO> listados = service.listarConvidados(idEvento);
+        if (listados.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Evento sem convidados!");
         } else {
-            return ResponseEntity.ok(service.listarConvidados(idEvento));
+            return ResponseEntity.ok(listados);
         }
     }
     @Operation(summary = "Remover convidado de um evento")
@@ -75,10 +78,11 @@ public class EventoController {
     })
     @GetMapping
     public ResponseEntity<?> listarEventos(){
-        if(service.listarEventos().isEmpty()){
+        List<EventoDTO> listados = service.listarEventos();
+        if(listados.isEmpty()){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Não há eventos existentes!");
         }else{
-            return ResponseEntity.ok(service.listarEventos());
+            return ResponseEntity.ok(listados);
         }
     }
     @Operation(summary = "Listar eventos por data de agendamento")
@@ -88,7 +92,7 @@ public class EventoController {
     })
     @GetMapping("/{data}")
     public ResponseEntity<?> listaPorAgendamento(
-            @Parameter(description = "Data de agendamento no formato dd-MM-yyyy", required = true)
+            @Parameter(description = "Data de agendamento no formato yyyy-MM-dd", required = true)
             @PathVariable LocalDate data) {
         List<EventoDTO> eventosAgendados = service.listarPorAgendamento(data);
         if (eventosAgendados.isEmpty()) {
@@ -102,7 +106,8 @@ public class EventoController {
     @PostMapping
     public ResponseEntity<?> criarEvento(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Dados do evento. Campos obrigatórios: nome, localizacao e dataAgendamento")
-                                             @RequestBody EventoCreateDTO evento){
+            @Valid
+            @RequestBody EventoCreateDTO evento){
         EventoDTO dtoRetornado = service.criarEvento(evento);
         return ResponseEntity
                 .status(HttpStatus.CREATED)

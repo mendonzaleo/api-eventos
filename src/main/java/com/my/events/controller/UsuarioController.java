@@ -3,6 +3,7 @@ package com.my.events.controller;
 import com.my.events.DTO.UsuarioCreateDTO;
 import com.my.events.DTO.UsuarioDTO;
 import com.my.events.DTO.UsuarioUpdateDTO;
+import com.my.events.exception.UsuarioNaoEncontradoException;
 import com.my.events.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,10 +56,11 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     @GetMapping("/{id}")
-    public UsuarioDTO buscarUsuario(
+    public ResponseEntity<?> buscarUsuario(
             @Parameter(description = "ID do usuário", required = true)
             @PathVariable("id") Integer id) {
-        return service.buscarPorId(id);
+        UsuarioDTO retornado = service.buscarPorId(id);
+        return ResponseEntity.status(HttpStatus.OK).body(retornado);
     }
 
     @Operation(summary = "Excluir um usuário", security = @SecurityRequirement(name = "bearer-key"))
@@ -85,6 +88,7 @@ public class UsuarioController {
     @PostMapping
     public ResponseEntity<UsuarioDTO> criarUsuario(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Dados do novo usuário. Campos obrigatórios: nome, username e senha")
+            @Valid
             @RequestBody UsuarioCreateDTO usuario) {
         UsuarioDTO criado = service.criarUsuario(usuario);
         return ResponseEntity.status(HttpStatus.CREATED).body(criado);

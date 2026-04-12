@@ -3,12 +3,11 @@ package com.my.events.service;
 import com.my.events.DTO.UsuarioCreateDTO;
 import com.my.events.DTO.UsuarioDTO;
 import com.my.events.DTO.UsuarioUpdateDTO;
-import com.my.events.exception.EventoDadosInvalidosException;
+import com.my.events.exception.UsuarioDadosInvalidosException;
+import com.my.events.exception.UsuarioNaoEncontradoException;
 import com.my.events.model.Usuario;
 import com.my.events.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,15 +32,15 @@ public class UsuarioService {
     public UsuarioDTO criarUsuario(UsuarioCreateDTO dto) {
         Usuario usuarioCriado = new Usuario();
         if(dto.getNome() == null || dto.getNome().isBlank()){
-            throw new EventoDadosInvalidosException("O nome do usuário é obrigatório!");
+            throw new UsuarioDadosInvalidosException("O nome do usuário é obrigatório!");
         }
         usuarioCriado.setNome(dto.getNome());
         if (dto.getUsername() == null || dto.getUsername().isBlank()){
-            throw new EventoDadosInvalidosException("O username é obrigatório!");
+            throw new UsuarioDadosInvalidosException("O username é obrigatório!");
         }
         usuarioCriado.setUsername(dto.getUsername());
         if (dto.getSenha() == null || dto.getSenha().isBlank()){
-            throw new EventoDadosInvalidosException("A senha é obrigatória!");
+            throw new UsuarioDadosInvalidosException("A senha é obrigatória!");
         }
         usuarioCriado.setSenha(encoder.encode(dto.getSenha()));
 
@@ -64,7 +63,7 @@ public class UsuarioService {
     }
 
     public UsuarioDTO buscarPorId(Integer id) {
-        Usuario usuarioProcurado = usuarioRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        Usuario usuarioProcurado = usuarioRepository.findById(id).orElseThrow(() -> new UsuarioNaoEncontradoException("Usuário não encontrado"));
 
         return toDTO(usuarioProcurado);
     }
