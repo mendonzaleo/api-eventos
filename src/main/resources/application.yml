@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: events
+  profiles:
+    active: dev
+
+server:
+  port: 9090
+
+jwt:
+  secret: ${JWT_SECRET:sua-chave-secreta-muito-longa-e-segura-aqui-minimo-256-bits}
+  expiration: 3600000
