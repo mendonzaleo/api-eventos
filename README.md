@@ -71,43 +71,58 @@ CREATE DATABASE db_events;
 
 ### 3. Configure as credenciais do banco
 
-Abra o arquivo `src/main/resources/application.properties` e ajuste as propriedades conforme seu ambiente:
+O projeto utiliza **Spring Profiles** para separar as configurações por ambiente. Os arquivos estão em `src/main/resources/`:
 
-```properties
-spring.application.name=events
+| Arquivo | Descrição |
+|---|---|
+| `application.yml` | Configurações comuns a todos os ambientes |
+| `application-dev.yml` | Configurações do ambiente local (banco local) |
+| `application-prod.yml` | Configurações de produção (variáveis de ambiente) |
 
-# Porta da aplicação
-server.port=9090
+Edite o `application-dev.yml` com as credenciais do seu PostgreSQL local:
 
-# Conexão com o PostgreSQL
-spring.datasource.url=jdbc:postgresql://localhost:5432/db_events
-spring.datasource.username=postgres
-spring.datasource.password=admin
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/db_events
+    username: postgres
+    password: admin
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-# JPA / Hibernate
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-
-# Pool de conexões
-spring.datasource.hikari.maximum-pool-size=5
-
-# JWT
-jwt.secret=sua-chave-secreta-minimo-32-caracteres-aqui
-jwt.expiration=3600000
-
-# Logging
-logging.level.root=INFO
-logging.level.org.springframework=DEBUG
-logging.level.com.meus.eventos=TRACE
+logging:
+  level:
+    root: INFO
+    org.springframework: DEBUG
+    com.meus.eventos: TRACE
 ```
 
-> ⚠️ **Atenção:** nunca suba credenciais reais para o repositório. O `jwt.secret` deve ter no mínimo 32 caracteres (256 bits). Em produção, utilize variáveis de ambiente:
+O profile ativo padrão é `dev`, definido no `application.yml`:
+
+```yaml
+spring:
+  profiles:
+    active: dev
+```
+
+> ⚠️ **Atenção:** nunca suba credenciais reais para o repositório. Em produção, todas as configurações sensíveis são lidas via variáveis de ambiente definidas no `application-prod.yml`:
 >
-> ```properties
-> jwt.secret=${JWT_SECRET}
-> jwt.expiration=${JWT_EXPIRATION:3600000}
+> ```yaml
+> spring:
+>   datasource:
+>     url: jdbc:postgresql://${DB_HOST}/${DB_NAME}
+>     username: ${DB_USER}
+>     password: ${DB_PASSWORD}
+> jwt:
+>   secret: ${JWT_SECRET}
 > ```
 
 ---
@@ -132,14 +147,27 @@ mvnw.cmd spring-boot:run
 mvn spring-boot:run
 ```
 
+### Especificando o profile na execução
+
+```bash
+# Ambiente de desenvolvimento (padrão)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Ambiente de produção
+./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
+```
+
 ### Gerando e executando o JAR
 
 ```bash
 # Build
 ./mvnw clean package -DskipTests
 
-# Execução
-java -jar target/events-0.0.1-SNAPSHOT.jar
+# Execução em dev
+java -jar target/events-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
+
+# Execução em prod
+java -jar target/events-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
 Após a inicialização, a aplicação estará disponível em:
@@ -160,10 +188,19 @@ Acesse após iniciar a aplicação:
 http://localhost:9090/swagger-ui/index.html
 ```
 
-No Swagger UI você pode visualizar todos os endpoints, seus parâmetros, modelos de requisição e resposta, e executar chamadas diretamente pelo navegador. A autenticação pode ser feita de duas formas:
+No Swagger UI você pode visualizar todos os endpoints, seus parâmetros, modelos de requisição e resposta, e executar chamadas diretamente pelo navegador.
 
-- **Basic Auth:** clique em **Authorize**, selecione *BasicAuth* e informe username e senha.
-- **JWT:** obtenha um token via `POST /auth/login`, clique em **Authorize**, selecione *BearerAuth* e cole o token no campo `Value` no formato `Bearer <token>`.
+### 🔒 Autenticando no Swagger UI
+
+1. Faça uma requisição para `POST /auth/login` diretamente pelo Swagger para obter o token
+2. Copie o valor do campo `token` retornado na resposta
+3. Clique no botão **Authorize** 🔓 no canto superior direito
+4. Cole o token no campo `Value` (somente o token, **sem** o prefixo `Bearer`)
+5. Clique em **Authorize**
+
+A partir desse momento, todas as requisições feitas pelo Swagger incluirão automaticamente o header `Authorization: Bearer <token>`.
+
+> 💡 O token expira após o tempo configurado em `jwt.expiration` (padrão: 1 hora). Após a expiração, repita o processo para obter um novo token.
 
 ---
 
@@ -354,7 +391,7 @@ curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
      http://localhost:9090/eventos
 ```
 
-**Configuração do token (`application.properties`):**
+**Configuração do token (`application.yml`):**
 
 | Propriedade | Descrição |
 |---|---|
@@ -614,6 +651,8 @@ api-eventos/
 │   │   │   │   ├── AuthController.java         # Endpoint de login JWT
 │   │   │   │   ├── EventoController.java       # Endpoints de eventos
 │   │   │   │   └── UsuarioController.java      # Endpoints de usuários
+│   │   │   ├── config/
+│   │   │   │   └── SwaggerConfig.java          # Configuração do Swagger UI (BearerAuth + BasicAuth)
 │   │   │   ├── DTO/
 │   │   │   │   ├── EventoCreateDTO.java
 │   │   │   │   ├── EventoDTO.java
@@ -645,7 +684,9 @@ api-eventos/
 │   │   │   │   └── UsuarioService.java
 │   │   │   └── EventsApplication.java
 │   │   └── resources/
-│   │       └── application.properties
+│   │       ├── application.yml                 # Configurações comuns (profile ativo padrão: dev)
+│   │       ├── application-dev.yml             # Configurações de desenvolvimento (banco local)
+│   │       └── application-prod.yml            # Configurações de produção (variáveis de ambiente)
 │   └── test/
 │       └── java/com/my/events/
 │           ├── config/
@@ -676,10 +717,12 @@ api-eventos/
 - [x] Dois métodos de autenticação coexistindo (Basic Auth + JWT)
 - [x] Controle de acesso por perfis (`ROLE_USER`, `ROLE_MANAGERS`)
 - [x] Documentação automática com Swagger UI
+- [x] Autenticação JWT e Basic Auth integradas ao Swagger UI (botão Authorize)
 - [x] Testes unitários na camada de service
 - [x] Testes de integração dos controllers com MockMvc
 - [x] Tratamento centralizado de exceções (`GlobalExceptionHandler`)
 - [x] Validação de dados com Jakarta Validation nas DTOs
+- [x] Separação de configurações por ambiente com Spring Profiles (dev / prod)
+- [x] Variáveis de ambiente para configuração sensível
 - [ ] Paginação nos endpoints de listagem
-- [ ] Variáveis de ambiente para configuração sensível
 - [ ] Containerização com Docker e Docker Compose
