@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${JDBC_DATABASE_URL}
+    url: jdbc:postgresql://user_db_events:GFZ0eLKajSjSl7HVXGVI0MriGlpIZkqd@dpg-d7ju9pu7r5hc738n0fa0-a/db_events_ljag
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     hikari:
